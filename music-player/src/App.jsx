@@ -1,121 +1,77 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { useEffect, useState } from "react";
+import pb from "./pocketbase";
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [songs, setSongs] = useState([]);
+  const [title, setTitle] = useState("");
+  const [artist, setArtist] = useState("");
+  const [file, setFile] = useState(null);
+
+  // Fetch songs
+  const fetchSongs = async () => {
+    const records = await pb.collection("songs").getFullList();
+    setSongs(records);
+  };
+
+  useEffect(() => {
+    fetchSongs();
+  }, []);
+
+  // Upload song
+ const handleUpload = async () => {
+  if (!file) {
+    alert("Select a file first!");
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append("title", title);
+  formData.append("artist", artist);
+  formData.append("audio", file);
+
+  try {
+    await pb.collection("songs").create(formData);
+    fetchSongs();
+  } catch (err) {
+    console.log(err.response);
+  }
+};
+
+  // Delete song
+  const deleteSong = async (id) => {
+    await pb.collection("songs").delete(id);
+    fetchSongs();
+  };
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <div style={{ padding: "20px", background: "#121212", color: "white", minHeight: "100vh" }}>
+      <h1>🎵 Music Player Manager</h1>
 
-      <div className="ticks"></div>
+      {/* Upload Form */}
+      <div>
+        <input placeholder="title" onChange={(e) => setTitle(e.target.value)} />
+        <input placeholder="artist" onChange={(e) => setArtist(e.target.value)} />
+        <input type="file" onChange={(e) => setFile(e.target.files[0])} />
+        <button onClick={handleUpload}>Upload</button>
+      </div>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+      <hr />
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+      {/* Song List */}
+      {songs.map((song) => (
+        <div key={song.id} style={{ marginBottom: "20px" }}>
+          <h3>{song.title} - {song.artist}</h3>
+
+          <audio controls
+            src={pb.files.getUrl(song, song.audio)}
+          />
+
+          <br />
+          <button onClick={() => deleteSong(song.id)}>Delete</button>
+        </div>
+      ))}
+    </div>
+  );
 }
 
-export default App
+export default App;
